@@ -1,113 +1,142 @@
-import Image from "next/image";
+"use client"
+import { useState, useEffect } from "react";
+import * as d3 from "d3";
 
 export default function Home() {
+  const [state, setState] = useState('');
+  const [district, setDistrict] = useState('');
+  const [startYear, setStartYear] = useState('');
+  const [endYear, setEndYear] = useState('');
+  const [parameter, setParameter] = useState('');
+  const [data, setData] = useState([]);
+  const [error, setError] = useState('');
+  const [buttonClicked, setButtonClicked] = useState(false);
+
+  useEffect(() => {
+    if (buttonClicked) {
+      generateChart(data);
+    }
+  }, [data, buttonClicked]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setButtonClicked(true);
+
+    if (!state || !district || !startYear || !endYear || !parameter) {
+      setError('All fields are required');
+      return;
+    }
+
+    try {
+      // Mock data for demonstration
+      const responseData = [
+        { year: 1965, rainfall: 4555.32 },
+        { year: 1966, rainfall: 7489.07 },
+        { year: 1967, rainfall: 5527.14 },
+        // Add more data entries here
+      ];
+
+      setData(responseData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Error fetching data. Please try again.');
+    }
+  };
+
+  const generateChart = (data) => {
+    const margin = { top: 20, right: 30, bottom: 60, left: 60 };
+    const width = window.innerWidth > 500 ? 500 : window.innerWidth - 40;
+    const height = 300;
+
+    // Remove any existing chart
+    d3.select("#chart").selectAll("*").remove();
+
+    // Append SVG to the container
+    const svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Define scales
+    const x = d3.scaleBand()
+      .domain(data.map(d => d.year))
+      .range([0, width])
+      .padding(0.1);
+
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(data, d => d.rainfall)])
+      .nice()
+      .range([height, 0]);
+
+    // Draw bars
+    svg.selectAll(".bar")
+      .data(data)
+      .enter().append("rect")
+      .attr("class", "bar")
+      .attr("x", d => x(d.year))
+      .attr("width", x.bandwidth())
+      .attr("y", d => y(d.rainfall))
+      .attr("height", d => height - y(d.rainfall))
+      .attr("fill", "steelblue");
+
+    // Draw x-axis
+    svg.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .attr("dy", ".35em")
+      .attr("transform", "rotate(45)")
+      .style("text-anchor", "start");
+
+    // Draw y-axis
+    svg.append("g")
+      .call(d3.axisLeft(y));
+
+    // Add labels
+    svg.append("text")
+      .attr("transform", `translate(${width / 2},${height + margin.top + 20})`)
+      .style("text-anchor", "middle")
+      .text("Year");
+
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x", 0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text("Rainfall (mm)");
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <div className="min-h-screen bg-gray-100 flex justify-center items-center">
+      <div className="bg-white p-8 rounded shadow-md text-gray-800 w-full md:w-3/4 lg:w-2/3 xl:w-1/2">
+        <h1 className="text-3xl mb-6 text-center">Annual Rainfall Visualization</h1>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select value={state} onChange={(e) => setState(e.target.value)} className="input-field">
+              <option value="">Select State</option>
+              <option value="Bihar">Bihar</option>
+            </select>
+            <select value={district} onChange={(e) => setDistrict(e.target.value)} className="input-field">
+              <option value="">Select District</option>
+              <option value="Purnia">Purnia</option>
+            </select>
+            <input type="number" placeholder="Start Year" value={startYear} onChange={(e) => setStartYear(e.target.value)} className="input-field" />
+            <input type="number" placeholder="End Year" value={endYear} onChange={(e) => setEndYear(e.target.value)} className="input-field" />
+            <select value={parameter} onChange={(e) => setParameter(e.target.value)} className="input-field">
+              <option value="">Select Parameter</option>
+              <option value="Precipitation">Precipitation</option>
+              <option value="Minimum temperature">Minimum temperature</option>
+              {/* Add more options for other parameters */}
+            </select>
+          </div>
+          {error && <p className="text-red-500">{error}</p>}
+          <button type="submit" className="mt-8 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 w-full">Generate Chart</button>
+        </form>
+        {buttonClicked && <div id="chart" className="mt-8"></div>}
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
 }
